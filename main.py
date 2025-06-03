@@ -1,8 +1,9 @@
+import os
 import socket as sk 
 import threading
 
 host = "0.0.0.0"
-port = 65432
+port = int(os.environ.get("PORT", 65432))
 
 players = []
 lock = threading.Lock()
