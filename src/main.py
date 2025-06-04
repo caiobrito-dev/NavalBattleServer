@@ -17,18 +17,24 @@ def handle_client(conn, addr):
     with conn:
         # Inicializa dados do jogador
         with lock:
+        
+            # Objeto do cliente é adicionado ao dicionário de jogadores
             jogadores[conn] = {
                 'endereco': addr,
-                'barcos': set(),
-                'tiros': set(),
-                'acertos': set(),
+                'barcos': [],
+                'tiros': [],
+                'acertos': [],
                 'pronto': False
             }
 
         conn.sendall(b"Bem-vindo ao Batalha Naval!\n")
 
+
+        # Loop principal onde o servidor recebe todos os comandos do cliente
         while True:
             try:
+
+                # Recebe dados do cliente
                 data = conn.recv(1024)
                 if not data:
                     break
@@ -36,31 +42,51 @@ def handle_client(conn, addr):
                 message = data.decode().strip()
                 print(f"[{addr}] {message}")
 
+
+                # Mensagem de inicio do jogo, somente dps dessa mensagem o jogador pode enviar certos comandos
                 if message.upper() == "READY":
                     with lock:
                         jogadores[conn]['pronto'] = True
                     conn.sendall(b"Voce esta pronto!\n")
 
+                # Comando para posicionar barcos 
                 elif message.upper().startswith("BOATS"):
+
+                    # Exemplo de chegada: "3 A3 A6"
+                    # 3 = Tamanho do barco, A3 = Posição inicial, A6 = Posição final
+
                     partes = message.split()
                     posicoes = set(partes[1:])
-                    if len(posicoes) != 5:
-                        conn.sendall(b"Erro: envie exatamente 5 posicoes.\n")
+                    if len(posicoes) != 3:
+                        conn.sendall(b"Erro: envie exatamente 3 informacoes.\n")
+
                     else:
                         with lock:
-                            jogadores[conn]['barcos'] = posicoes
+                            barco = {
+                                "tamanho": partes[1], 
+                                "inicio": partes[2], 
+                                "fim": partes[3]
+                                }
+                            jogadores[conn]['barcos'].append(barco) 
+
                         conn.sendall(b"Barcos posicionados com sucesso.\n")
 
+
+                # Comando para atacar um barco do oponente
                 elif message.upper().startswith("ATTACK"):
                     partes = message.split()
+
+                    # Confirma se está passando duas coordenadas para o ataque 
                     if len(partes) != 2:
                         conn.sendall(b"Uso correto: ATTACK <posicao>\n")
                         continue
 
+                    # Formato do alvo: A3, B5, etc.
                     alvo = partes[1].upper()
                     acerto = False
 
                     with lock:
+
                         for player, dados in jogadores.items():
                             if player != conn:
                                 if alvo in dados['barcos']:
@@ -71,10 +97,11 @@ def handle_client(conn, addr):
                                     player.sendall(f"Seu navio na {alvo} foi atingido!\n".encode())
 
                     if acerto:
-                        conn.sendall(f"Acertou na posicao {alvo}!\n".encode())
+                        conn.sendall(f"ACERTOU {alvo}".encode())
                     else:
-                        conn.sendall(f"Errou na posicao {alvo}.\n".encode())
+                        conn.sendall(f"ERROU {alvo}.\n".encode())
 
+                # Função para retornar dados de um player em especifico 
                 elif message.upper() == "STATUS":
                     with lock:
                         barcos = jogadores[conn]['barcos']
@@ -109,6 +136,8 @@ def handle_client(conn, addr):
 
 def main():
     print("[INICIANDO] Servidor esta iniciando...")
+
+    # Inicio do servidor 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.bind((HOST, PORT))
         s.listen()
@@ -116,6 +145,7 @@ def main():
 
         while True:
             conn, addr = s.accept()
+            # Cria uma nova thread para cada cliente conectado
             thread = threading.Thread(target=handle_client, args=(conn, addr))
             thread.start()
             print(f"[ATIVO] Conexoes ativas: {threading.active_count() - 1}")
