@@ -1,0 +1,56 @@
+  elif message.upper().startswith("BOATS"):
+
+                    # Exemplo de chegada: "3 A3 A6"
+                    # 3 = Tamanho do barco, A3 = Posição inicial, A6 = Posição final
+
+                    partes = message.split()
+                    posicoes = set(partes[1:])
+                    if len(posicoes) != 3:
+                        conn.sendall(b"Erro: envie exatamente 3 informacoes.\n")
+
+                    else:
+                        with lock:
+                            barco = {
+                                "tamanho": partes[1], 
+                                "inicio": partes[2], 
+                                "fim": partes[3]
+                                }
+                            jogadores[conn]['barcos'].append(barco) 
+
+                            conn.sendall(f"Barcos posicionados com sucesso. nas posicoes {partes[1:]} \n".encode())
+
+
+
+
+elif message.upper().startswith("ATTACK"):
+                    partes = message.split()
+
+                    # Confirma se está passando duas coordenadas para o ataque 
+                    if len(partes) != 2:
+                        conn.sendall(b"Uso correto: ATTACK <posicao>\n")
+                        continue
+
+                    # Formato do alvo: A3, B5, etc.
+                    alvo = partes[1].upper()
+                    acerto = False
+
+                    with lock:
+
+                        for player, dados in jogadores.items():
+                            if player != conn:
+                                if alvo in dados['barcos']:
+                                    dados['barcos'].remove(alvo)
+                                    dados['acertos'].add(alvo)
+                                    jogadores[conn]['tiros'].add(alvo)
+                                    acerto = True
+                                    
+
+                    if acerto:
+                        conn.sendall(f"ACERTOU {alvo}".encode())
+
+                        # Verifica se o jogador atingiu todos os barcos do oponente
+                        if not any(dados['barcos'] for dados in jogadores.values() if dados != jogadores[conn]):
+                            conn.sendall(b"Parabens! Voce venceu!\n")
+                            break
+                    else:
+                        conn.sendall(f"ERROU {alvo}.\n".encode())
