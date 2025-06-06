@@ -11,9 +11,11 @@ jogadores = {}
 # Lock para evitar problemas de acesso concorrente
 lock = threading.Lock()
 
-def gerar_posicoes(inicio, fim):
-    linha_inicio, coluna_inicio = inicio[0].upper(), int(inicio[1:])
-    linha_fim, coluna_fim = fim[0].upper(), int(fim[1:])
+def gerar_posicoes(inicio, fim): # A1 E1 5posições
+    linha_inicio = inicio[0].upper()
+    coluna_inicio = int(inicio[1:])
+    linha_fim = fim[0].upper()
+    coluna_fim = int(fim[1:])
 
     posicoes = []
 
